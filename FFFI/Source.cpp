@@ -38,12 +38,27 @@ int main(int, char**)
     //waveを平滑化
     cv::blur(wave, blurredWave, cv::Size(3, 1));
 
+    //直近2つの極大点を取得
+    bool beforeIsUp = true;
+    int maxCount = 0;
+    int maxIndex[2]; //maxIndex[1]が開始点，maxIndex[0]が終了点
+    for (int i = waveLength - 2; i > 0; i--) { //waveLength-2とするのは平滑化フィルタにより最新の値が変化するため
+      const bool isUp = blurredWave.at<float>(i) < blurredWave.at<float>(i - 1);
+      if (isUp && !beforeIsUp) { //極大点ならばインデックスを記録
+        maxIndex[maxCount] = i;
+        maxCount++;
+        if (maxCount > 1) break;
+      }
+      beforeIsUp = isUp;
+    }
+
     //グラフを描画
     for (int i = 1; i < waveLength; i++) {
       const cv::Point pt1 = cv::Point(frame.cols / waveLength * (i - 1), frame.rows * blurredWave.at<float>(i - 1));
       const cv::Point pt2 = cv::Point(frame.cols / waveLength * i, frame.rows * blurredWave.at<float>(i));
       const bool isUp = blurredWave.at<float>(i) < blurredWave.at<float>(i - 1);
-      const cv::Scalar color = isUp ? CV_RGB(255, 0, 0) : CV_RGB(0, 0, 255);
+      cv::Scalar color = isUp ? CV_RGB(255, 0, 0) : CV_RGB(0, 0, 255);
+      if (maxIndex[1] <= i - 1 && i <= maxIndex[0]) color = CV_RGB(0, 255, 0); //直近の1往復分の波は緑で表示
       cv::line(frame, pt1, pt2, color, 1, CV_AA);
     }
     imshow("wave", frame);
