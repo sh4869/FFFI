@@ -1,4 +1,4 @@
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
     canvas {
         border: 1px solid black;
@@ -25,16 +25,13 @@
         padding-right: 10px;
         width: 25%;
         vertical-align: top;
-        font: 14px 'Lucida Grande', sans-serif;
+        font: 14px "Lucida Grande", sans-serif;
     }
-
 </style>
 <body>
     <div id="container">
-        <div class="invisible">
-            <video id="video" class="hidden">Your browser does not support the video tag.</video>
-        </div>
-        <canvas class="center-block" id="canvasOutput" width=320 height=240></canvas>
+        <div class="invisible"><video id="video" class="hidden">Your browser does not support the video tag.</video></div>
+        <canvas class="center-block" id="canvasOutput" width="320" height="240"></canvas>
         <p class="fps"></p>
     </div>
 </body>
@@ -42,8 +39,10 @@
 <script src="https://threejs.org/examples/js/libs/stats.min.js"></script>
 <script>
     var Module = {
-        wasmBinaryFile: 'https://huningxin.github.io/opencv.js/build/wasm/opencv_js.wasm',
-        _main: function () { opencvIsReady(); }
+        wasmBinaryFile: "https://huningxin.github.io/opencv.js/build/wasm/opencv_js.wasm",
+        _main: function() {
+            opencvIsReady();
+        }
     };
 </script>
 <script async src="https://huningxin.github.io/opencv.js/build/wasm/opencv.js"></script>
@@ -76,36 +75,44 @@
 
     function startCamera() {
         if (streaming) return;
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then(function (s) {
+        navigator.mediaDevices
+            .getUserMedia({ video: true, audio: true })
+            .then(function(s) {
                 stream = s;
                 video.srcObject = s;
                 video.play();
                 oscillator = audioCtx.createOscillator();
-                oscillator.type = 'square';
+                oscillator.type = "square";
                 oscillator.frequency.value = 440;
                 oscillator.detune.value = 100;
                 oscillator.connect(audioCtx.destination);
                 oscillator.start(0);
             })
-            .catch(function (err) {
+            .catch(function(err) {
                 console.log("An error occured! " + err);
             });
 
-        video.addEventListener("canplay", function (ev) {
-            if (!streaming) {
-                height = video.videoHeight / (video.videoWidth / width);
-                video.setAttribute("width", width);
-                video.setAttribute("height", height);
-                streaming = true;
-                vc = new cv.VideoCapture(video);
-            }
-            startVideoProcessing();
-        }, false);
+        video.addEventListener(
+            "canplay",
+            function(ev) {
+                if (!streaming) {
+                    height = video.videoHeight / (video.videoWidth / width);
+                    video.setAttribute("width", width);
+                    video.setAttribute("height", height);
+                    streaming = true;
+                    vc = new cv.VideoCapture(video);
+                }
+                startVideoProcessing();
+            },
+            false
+        );
     }
 
     function startVideoProcessing() {
-        if (!streaming) { console.warn("Please startup your webcam"); return; }
+        if (!streaming) {
+            console.warn("Please startup your webcam");
+            return;
+        }
         stopVideoProcessing();
         src = new cv.Mat(height, width, cv.CV_8UC4);
         dst = new cv.Mat(height, width, cv.CV_8UC3);
@@ -121,7 +128,7 @@
         let highScalar = new cv.Scalar(120, 255, 200);
         let low = new cv.Mat(height, width, dst.type(), lowScalar);
         let high = new cv.Mat(height, width, dst.type(), highScalar);
-        cv.inRange(dst, low, high, dst2)
+        cv.inRange(dst, low, high, dst2);
         let mu = cv.moments(dst2);
         return { x: mu.m10 / mu.m00, y: mu.m01 / mu.m00 };
     }
@@ -141,8 +148,8 @@
         }
         vc.read(src);
         const moment = getMomemnt(src);
-        
-        if ((lastMoment.x > src.cols / 2 && moment.x <= src.cols / 2)  || (lastMoment.x < src.cols / 2 && moment.x >= src.cols / 2)) {
+
+        if ((lastMoment.x > src.cols / 2 && moment.x <= src.cols / 2) || (lastMoment.x < src.cols / 2 && moment.x >= src.cols / 2)) {
             updateCount++;
             console.log("update!");
             if (updateCount > 1) {
@@ -153,10 +160,10 @@
         cv.imshow("canvasOutput", src);
         stats.end();
         if (update) {
-            const heltz = 1000 / (Date.now() - firstTime) * 120;
+            const heltz = (1000 / (Date.now() - firstTime)) * 120;
             const result = 440 * Math.pow(2, Math.floor(Math.log2(heltz / 440) * 12) / 12);
             oscillator.frequency.value = result;
-            console.log(result)
+            console.log(result);
             document.querySelector(".fps").innerText = result.toString() + "fps";
             firstTime = null;
             update = false;
@@ -171,10 +178,9 @@
         if (dst2 != null && !dst2.isDeleted()) dst2.delete();
     }
 
-
     function opencvIsReady() {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        console.log('OpenCV.js is ready');
+        console.log("OpenCV.js is ready");
         stats = new Stats();
         startCamera();
     }
