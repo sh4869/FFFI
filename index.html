@@ -32,7 +32,8 @@
     <div id="container">
         <div class="invisible"><video id="video" class="hidden">Your browser does not support the video tag.</video></div>
         <canvas class="center-block" id="canvasOutput" width="320" height="240"></canvas>
-        <p class="fps"></p>
+        <p>Speed: <span class="speed"></span></p>
+        <p>Hz: <span class="heltz"></span></p>
     </div>
 </body>
 <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
@@ -133,41 +134,30 @@
         return { x: mu.m10 / mu.m00, y: mu.m01 / mu.m00 };
     }
 
-    function aveHeltz() {
-        let sum = 0;
-        for (let i = 0; i < 5; i++) {
-            sum += heltzs[i];
-        }
-        return sum / 5;
-    }
-
+    const distancesSize = 30;
+    let distances = Array(distancesSize).fill(0);
     function processVideo() {
         stats.begin();
-        if (firstTime === null) {
-            firstTime = Date.now();
-        }
         vc.read(src);
         const moment = getMomemnt(src);
-
-        if ((lastMoment.x > src.cols / 2 && moment.x <= src.cols / 2) || (lastMoment.x < src.cols / 2 && moment.x >= src.cols / 2)) {
-            updateCount++;
-            console.log("update!");
-            if (updateCount > 1) {
-                update = true;
-                updateCount = 0;
-            }
-        }
+        cv.circle(src, moment, 2, [255, 0, 0, 255]);
+        cv.line(src, lastMoment, moment, [255, 0, 0, 255]);
         cv.imshow("canvasOutput", src);
         stats.end();
-        if (update) {
-            const heltz = (1000 / (Date.now() - firstTime)) * 120;
-            const result = 440 * Math.pow(2, Math.floor(Math.log2(heltz / 440) * 12) / 12);
-            oscillator.frequency.value = result;
-            console.log(result);
-            document.querySelector(".fps").innerText = result.toString() + "fps";
-            firstTime = null;
-            update = false;
+
+        const distance = Math.sqrt((moment.x - lastMoment.x) ** 2 + (moment.y - lastMoment.y) ** 2);
+        if (!isNaN(distance) && !(moment.x == 0 && moment.y == 0)) {
+            distances.push(distance);
+            distances.shift();
         }
+        const totalDistance = distances.reduce((accumlator, currentValue) => accumlator + currentValue);
+        const speed = totalDistance / distances.length;
+        const heltz = speed * 10 + 200; //speedが0-30の範囲で200Hz-500Hzぐらいになるように調整
+
+        oscillator.frequency.value = heltz;
+        document.querySelector(".speed").innerText = speed.toString();
+        document.querySelector(".heltz").innerText = heltz;
+
         lastMoment = moment;
         requestAnimationFrame(processVideo);
     }
