@@ -4,6 +4,12 @@
         border: 1px solid black;
     }
 
+    #background,
+    #circle {
+        border: none;
+        position: absolute;
+    }
+
     .invisible {
         display: none;
     }
@@ -34,6 +40,7 @@
         <canvas class="center-block" id="canvasOutput" width="320" height="240"></canvas>
         <p>Speed: <span class="speed"></span></p>
         <p>Hz: <span class="heltz"></span></p>
+        <div><canvas id="background"></canvas><canvas id="circle"></canvas></div>
     </div>
 </body>
 <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
@@ -73,6 +80,72 @@
     var oscillator;
     var oscillator2;
     var oscillator3;
+
+    const scaleOptions = {
+        height: 50,
+        width: 960,
+        lowerHeltz: 200,
+        upperHeltz: 800
+    };
+
+    const initScale = () => {
+        const backgroundCanvas = document.getElementById("background");
+        const circleCanvas = document.getElementById("circle");
+        backgroundCanvas.width = scaleOptions.width;
+        backgroundCanvas.height = scaleOptions.height;
+        circleCanvas.width = scaleOptions.width;
+        circleCanvas.height = scaleOptions.height;
+
+        const scales = [
+            { label: "ラ", heltz: 220 },
+            { label: "シ", heltz: 246 },
+            { label: "ド", heltz: 261 },
+            { label: "レ", heltz: 293 },
+            { label: "ミ", heltz: 329 },
+            { label: "ファ", heltz: 349 },
+            { label: "ソ", heltz: 391 },
+            { label: "ラ", heltz: 440 },
+            { label: "シ", heltz: 493 },
+            { label: "ド", heltz: 523 },
+            { label: "レ", heltz: 587 },
+            { label: "ミ", heltz: 659 }
+        ];
+
+        const ctx = backgroundCanvas.getContext("2d");
+        ctx.fillStyle = "#aaa";
+        ctx.strokeStyle = "#aaa";
+
+        ctx.beginPath();
+        ctx.moveTo(0, scaleOptions.height / 2);
+        ctx.lineTo(scaleOptions.width, scaleOptions.height / 2);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        for (const scale of scales) {
+            const x = ((scale.heltz - scaleOptions.lowerHeltz) / (scaleOptions.upperHeltz - scaleOptions.lowerHeltz)) * scaleOptions.width;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, scaleOptions.height);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.font = "18px 'メイリオ'";
+            ctx.fillText(scale.label, x, 18);
+        }
+    };
+    initScale();
+
+    const drawScale = heltz => {
+        const circleCanvas = document.getElementById("circle");
+        const ctx = circleCanvas.getContext("2d");
+        const y = scaleOptions.height / 2;
+        const x = ((heltz - scaleOptions.lowerHeltz) / (scaleOptions.upperHeltz - scaleOptions.lowerHeltz)) * scaleOptions.width;
+        ctx.clearRect(0, 0, scaleOptions.width, scaleOptions.height);
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2, false);
+        ctx.fillStyle = "#f55";
+        ctx.fill();
+    };
 
     function startCamera() {
         if (streaming) return;
@@ -157,6 +230,7 @@
         oscillator.frequency.value = heltz;
         document.querySelector(".speed").innerText = speed.toString();
         document.querySelector(".heltz").innerText = heltz;
+        drawScale(heltz);
 
         lastMoment = moment;
         requestAnimationFrame(processVideo);
