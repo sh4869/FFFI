@@ -1,251 +1,79 @@
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<style>
-    canvas {
-        border: 1px solid black;
-    }
-
-    #background,
-    #circle {
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css"
+    />
+    <style>
+      #background,
+      #circle {
         border: none;
         position: absolute;
-    }
+      }
 
-    .invisible {
+      .invisible {
         display: none;
-    }
+      }
 
-    .text-center {
+      .text-center {
         text-align: center;
-    }
+      }
 
-    .center-block {
+      .center-block {
         display: block;
         margin: auto;
-    }
-
-    .row {
-        margin: 10px;
-    }
-
-    tr td {
-        padding-right: 10px;
-        width: 25%;
-        vertical-align: top;
-        font: 14px "Lucida Grande", sans-serif;
-    }
-</style>
-<body>
-    <div id="container">
-        <div class="invisible"><video id="video" class="hidden">Your browser does not support the video tag.</video></div>
-        <canvas class="center-block" id="canvasOutput" width="320" height="240"></canvas>
+      }
+      p {
+        margin-top: 0.5em;
+        margin-bottom: 1em;
+      }
+      .display-zone {
+        height: 60px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="invisible">
+      <video id="video" class="hidden">Your browser does not support the video tag.</video>
+    </div>
+    <div class="container">
+      <div class="row"><h1>demo</h1></div>
+      <div class="row"><canvas class="center-block" id="canvasOutput"></canvas></div>
+      <div class="row">
         <p>Speed: <span class="speed"></span></p>
         <p>Hz: <span class="heltz"></span></p>
-        <div><canvas id="background"></canvas><canvas id="circle"></canvas></div>
+      </div>
+      <div class="row display-zone">
+        <canvas id="background" width="960" height="50"></canvas
+        ><canvas id="circle" width="960" height="50"></canvas>
+      </div>
+      <div class="row">
+        <button id="speed-button">SPEED</button> <button id="position-button">POSITION</button>
+        <button id="acceralation-button">ACCERALATION</button>
+      </div>
     </div>
-</body>
-<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-<script src="https://threejs.org/examples/js/libs/stats.min.js"></script>
-<script>
+  </body>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  <script src="https://threejs.org/examples/js/libs/stats.min.js"></script>
+  <script>
     var Module = {
-        wasmBinaryFile: "https://huningxin.github.io/opencv.js/build/wasm/opencv_js.wasm",
-        _main: function() {
-            opencvIsReady();
-        }
+      wasmBinaryFile: "https://huningxin.github.io/opencv.js/build/wasm/opencv_js.wasm",
+      _main: function() {
+        main();
+      }
     };
-</script>
-<script async src="https://huningxin.github.io/opencv.js/build/wasm/opencv.js"></script>
-
-<script>
-    // In this case, We set width 320, and the height will be computed based on the input stream.
-    let width = 960;
-    let height = 0;
-
-    // whether streaming video from the camera.
-    let streaming = false;
-
-    let video = document.getElementById("video");
-    let stream = null;
-    let vc = null;
-
-    let src = null;
-    let dst = null;
-    let dst2 = null;
-    var stats = null;
-    var audioCtx = null;
-    let firstTime = null;
-    let lastMoment = { x: 0, y: 0 };
-    let centerCount = 0;
-    let update = false;
-    let updateCount = 0;
-    var oscillator;
-    var oscillator2;
-    var oscillator3;
-
-    const scaleOptions = {
-        height: 50,
-        width: 960,
-        lowerHeltz: 200,
-        upperHeltz: 800
-    };
-
-    const initScale = () => {
-        const backgroundCanvas = document.getElementById("background");
-        const circleCanvas = document.getElementById("circle");
-        backgroundCanvas.width = scaleOptions.width;
-        backgroundCanvas.height = scaleOptions.height;
-        circleCanvas.width = scaleOptions.width;
-        circleCanvas.height = scaleOptions.height;
-
-        const scales = [
-            { label: "ラ", heltz: 220 },
-            { label: "シ", heltz: 246 },
-            { label: "ド", heltz: 261 },
-            { label: "レ", heltz: 293 },
-            { label: "ミ", heltz: 329 },
-            { label: "ファ", heltz: 349 },
-            { label: "ソ", heltz: 391 },
-            { label: "ラ", heltz: 440 },
-            { label: "シ", heltz: 493 },
-            { label: "ド", heltz: 523 },
-            { label: "レ", heltz: 587 },
-            { label: "ミ", heltz: 659 }
-        ];
-
-        const ctx = backgroundCanvas.getContext("2d");
-        ctx.fillStyle = "#aaa";
-        ctx.strokeStyle = "#aaa";
-
-        ctx.beginPath();
-        ctx.moveTo(0, scaleOptions.height / 2);
-        ctx.lineTo(scaleOptions.width, scaleOptions.height / 2);
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        for (const scale of scales) {
-            const x = ((scale.heltz - scaleOptions.lowerHeltz) / (scaleOptions.upperHeltz - scaleOptions.lowerHeltz)) * scaleOptions.width;
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, scaleOptions.height);
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.font = "18px 'メイリオ'";
-            ctx.fillText(scale.label, x, 18);
-        }
-    };
-    initScale();
-
-    const drawScale = heltz => {
-        const circleCanvas = document.getElementById("circle");
-        const ctx = circleCanvas.getContext("2d");
-        const y = scaleOptions.height / 2;
-        const x = ((heltz - scaleOptions.lowerHeltz) / (scaleOptions.upperHeltz - scaleOptions.lowerHeltz)) * scaleOptions.width;
-        ctx.clearRect(0, 0, scaleOptions.width, scaleOptions.height);
-        ctx.beginPath();
-        ctx.arc(x, y, 10, 0, Math.PI * 2, false);
-        ctx.fillStyle = "#f55";
-        ctx.fill();
-    };
-
-    function startCamera() {
-        if (streaming) return;
-        navigator.mediaDevices
-            .getUserMedia({ video: true, audio: true })
-            .then(function(s) {
-                stream = s;
-                video.srcObject = s;
-                video.play();
-                oscillator = audioCtx.createOscillator();
-                oscillator.type = "square";
-                oscillator.frequency.value = 440;
-                oscillator.detune.value = 0;
-                oscillator.connect(audioCtx.destination);
-                oscillator.start(0);
-            })
-            .catch(function(err) {
-                console.log("An error occured! " + err);
-            });
-
-        video.addEventListener(
-            "canplay",
-            function(ev) {
-                if (!streaming) {
-                    height = video.videoHeight / (video.videoWidth / width);
-                    video.setAttribute("width", width);
-                    video.setAttribute("height", height);
-                    streaming = true;
-                    vc = new cv.VideoCapture(video);
-                }
-                startVideoProcessing();
-            },
-            false
-        );
-    }
-
-    function startVideoProcessing() {
-        if (!streaming) {
-            console.warn("Please startup your webcam");
-            return;
-        }
-        stopVideoProcessing();
-        src = new cv.Mat(height, width, cv.CV_8UC4);
-        dst = new cv.Mat(height, width, cv.CV_8UC3);
-        dst2 = new cv.Mat(height, width, cv.CV_8UC1);
-
-        requestAnimationFrame(processVideo);
-    }
-
-    // 重心を取得
-    function getMomemnt(src) {
-        cv.cvtColor(src, dst, cv.COLOR_RGB2HSV);
-        let lowScalar = new cv.Scalar(70, 100, 30);
-        let highScalar = new cv.Scalar(120, 255, 200);
-        let low = new cv.Mat(height, width, dst.type(), lowScalar);
-        let high = new cv.Mat(height, width, dst.type(), highScalar);
-        cv.inRange(dst, low, high, dst2);
-        let mu = cv.moments(dst2);
-        return { x: mu.m10 / mu.m00, y: mu.m01 / mu.m00 };
-    }
-
-    const distancesSize = 30;
-    let distances = Array(distancesSize).fill(0);
-    function processVideo() {
-        stats.begin();
-        vc.read(src);
-        const moment = getMomemnt(src);
-        cv.circle(src, moment, 2, [255, 0, 0, 255]);
-        cv.line(src, lastMoment, moment, [255, 0, 0, 255]);
-        cv.imshow("canvasOutput", src);
-        stats.end();
-
-        const distance = Math.sqrt((moment.x - lastMoment.x) ** 2 + (moment.y - lastMoment.y) ** 2)/3;
-        if (!isNaN(distance) && !(moment.x == 0 && moment.y == 0)) {
-            distances.push(distance);
-            distances.shift();
-        }
-        const totalDistance = distances.reduce((accumlator, currentValue) => accumlator + currentValue);
-        const speed = totalDistance / distances.length;
-        const heltz = speed * 20 + 100; //speedが0-30の範囲で200Hz-500Hzぐらいになるように調整
-
-        oscillator.frequency.value = heltz;
-        document.querySelector(".speed").innerText = speed.toString();
-        document.querySelector(".heltz").innerText = heltz;
-        drawScale(heltz);
-
-        lastMoment = moment;
-        requestAnimationFrame(processVideo);
-    }
-
-    function stopVideoProcessing() {
-        if (src != null && !src.isDeleted()) src.delete();
-        if (dst != null && !dst.isDeleted()) dst.delete();
-        if (dst2 != null && !dst2.isDeleted()) dst2.delete();
-    }
-
-    function opencvIsReady() {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        console.log("OpenCV.js is ready");
-        stats = new Stats();
-        startCamera();
-    }
-</script>
+  </script>
+  <script async src="https://huningxin.github.io/opencv.js/build/wasm/opencv.js"></script>
+  <script src="index.js"></script>
+</html>
