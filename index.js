@@ -28,8 +28,8 @@ const gainNode = audioCtx.createGain();
 const scaleOptions = {
   height: 50,
   width: 960,
-  lowerHeltz: 200,
-  upperHeltz: 800
+  lowerHeltz: 350,
+  upperHeltz: 1200
 };
 
 const main = () => {
@@ -88,7 +88,16 @@ const initScale = () => {
     { label: "シ", heltz: 493 },
     { label: "ド", heltz: 523 },
     { label: "レ", heltz: 587 },
-    { label: "ミ", heltz: 659 }
+    { label: "ミ", heltz: 659 },
+    { label: "ファ", heltz: 698 },
+    { label: "ソ", heltz: 783 },
+    { label: "ラ", heltz: 880 },
+    { label: "シ", heltz: 987 },
+    { label: "ド", heltz: 1046 },
+    { label: "レ", heltz: 1174 },
+    { label: "ミ", heltz: 1318 },
+    { label: "ファ", heltz: 1396 },
+    { label: "ソ", heltz: 1567 }
   ];
   const ctx = backgroundCanvas.getContext("2d");
   ctx.fillStyle = "#aaa";
@@ -198,7 +207,7 @@ const processSpeedMode = moment => {
   }
   const totalDistance = distances.reduce((accumlator, currentValue) => accumlator + currentValue);
   const speed = totalDistance / distances.length;
-  const heltz = fixHeltz(speed * 20 + 100); //speedが0-30の範囲で200Hz-500Hzぐらいになるように調整
+  const heltz = fixHeltz(speed * 10 + 400); //speedが0-80の範囲で400Hz-1200Hzぐらいになるように調整
   document.querySelector(".speed").innerText = speed.toString();
   oscillator.frequency.value = heltz;
   document.querySelector(".heltz").innerText = heltz;
