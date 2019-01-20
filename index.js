@@ -207,7 +207,7 @@ const processSpeedMode = moment => {
   }
   const totalDistance = distances.reduce((accumlator, currentValue) => accumlator + currentValue);
   const speed = totalDistance / distances.length;
-  const heltz = fixHeltz(speed * 10 + 400); //speedが0-80の範囲で400Hz-1200Hzぐらいになるように調整
+  const heltz = speed * 10 + 400; //speedが0-80の範囲で400Hz-1200Hzぐらいになるように調整
   document.querySelector(".speed").innerText = speed.toString();
   oscillator.frequency.value = heltz;
   document.querySelector(".heltz").innerText = heltz;
