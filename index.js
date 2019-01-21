@@ -11,6 +11,7 @@ const buttonMap = {
   position: positionButton,
   acceralation: acceralationButton
 };
+const fixHeltzButton = document.getElementById("fixheltz-button");
 
 let stream = null;
 let vc = null;
@@ -19,6 +20,7 @@ let src = null;
 let dst = null;
 let dst2 = null;
 let soundMode = null;
+let useFixHeltz = false;
 let lastMoment = { x: 0, y: 0 };
 let lastSpeed = 0;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -35,7 +37,7 @@ const scaleOptions = {
 const main = () => {
   initScale();
   initButton();
-  setMode("speed");
+  setMode("position");
   startCamera();
 };
 
@@ -51,6 +53,14 @@ const setMode = mode => {
 };
 
 const initButton = () => {
+  fixHeltzButton.addEventListener("click", _ => {
+    useFixHeltz = !useFixHeltz;
+    if (useFixHeltz) {
+      fixHeltzButton.classList.add("button-primary");
+    } else {
+      fixHeltzButton.classList.remove("button-primary");
+    }
+  });
   speedButton.addEventListener(
     "click",
     _ => {
@@ -207,7 +217,7 @@ const processSpeedMode = moment => {
   }
   const totalDistance = distances.reduce((accumlator, currentValue) => accumlator + currentValue);
   const speed = totalDistance / distances.length;
-  const heltz = speed * 10 + 400; //speedが0-80の範囲で400Hz-1200Hzぐらいになるように調整
+  const heltz = useFixHeltz === true ? fixHeltz(speed * 10 + 400) : speed * 10 + 400; //speedが0-80の範囲で400Hz-1200Hzぐらいになるように調整
   document.querySelector(".speed").innerText = speed.toString();
   oscillator.frequency.value = heltz;
   document.querySelector(".heltz").innerText = heltz;
@@ -224,7 +234,8 @@ const processAcceralationMode = moment => {
   const speed = totalDistance / distances.length;
   let acceralation = speed - lastSpeed;
   if (acceralation < 0) acceralation *= -1;
-  const heltz = fixHeltz(acceralation * 150 + 150); //fixheltzを通すと音程が補正される
+  const heltz =
+    useFixHeltz === true ? fixHeltz(acceralation * 150 + 150) : acceralation * 150 + 150; //fixheltzを通すと音程が補正される
   oscillator.frequency.value = heltz;
   document.querySelector(".speed").innerText = speed.toString();
   document.querySelector(".heltz").innerText = heltz;
@@ -237,7 +248,7 @@ const processPositonMode = moment => {
   if (soundnum == NaN) soundnum = 0;
   soundnum = Math.min(Math.max(Math.floor(soundnum), 0), 11);
   const sArr = [3, 5, 7, 8, 10, 12, 14, 15, 17, 19, 20, 22, 24];
-  const heltz = 440 * Math.pow(2, sArr[soundnum] / 12);
+  const heltz =440 * Math.pow(2, sArr[soundnum] / 12);
   if (!Number.isNaN(heltz)) {
     oscillator.frequency.value = heltz;
     const gain = 1 - moment.y / height > 0.5 ? 1 - moment.y / height : 0.1;
@@ -248,6 +259,7 @@ const processPositonMode = moment => {
 };
 
 function processVideo() {
+  console.log(useFixHeltz);
   try {
     vc.read(src);
   } catch (e) {
